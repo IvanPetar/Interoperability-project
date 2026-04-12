@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Product",
+  "type": "object",
+  "required": ["naziv", "cijena"],
+  "properties": {
+    "naziv": { "type": "string", "minLength": 1 },
+    "cijena": { "type": "number", "minimum": 0.0 },
+    "kategorija": { "type": "string" },
+    "opis": { "type": "string" },
+    "kolicina": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

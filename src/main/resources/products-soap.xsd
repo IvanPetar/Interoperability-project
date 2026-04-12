@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://iis.algebra.hr/soap"
+           targetNamespace="http://iis.algebra.hr/soap"
+           elementFormDefault="qualified">
+
+    <xs:element name="SearchProductsRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="pojam" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="SearchProductsResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="products" type="tns:ProductSoap" maxOccurs="unbounded" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="ProductSoap">
+        <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+            <xs:element name="naziv" type="xs:string"/>
+            <xs:element name="cijena" type="xs:decimal"/>
+            <xs:element name="kategorija" type="xs:string" minOccurs="0"/>
+            <xs:element name="opis" type="xs:string" minOccurs="0"/>
+            <xs:element name="kolicina" type="xs:int" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

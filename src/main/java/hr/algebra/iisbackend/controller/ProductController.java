@@ -1,0 +1,109 @@
+package hr.algebra.iisbackend.controller;
+
+import tools.jackson.databind.ObjectMapper;
+import hr.algebra.iisbackend.dto.ProductDTO;
+import hr.algebra.iisbackend.service.JakartaXmlValidationService;
+import hr.algebra.iisbackend.service.ProductApiService;
+import hr.algebra.iisbackend.service.ProductService;
+import hr.algebra.iisbackend.validation.JsonValidator;
+import hr.algebra.iisbackend.validation.XmlValidator;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/products")
+@RequiredArgsConstructor
+public class ProductController {
+
+    // Routers to public (Supabase REST) or custom (JPA) based on api.mode
+    private final ProductApiService productApiService;
+
+    // Used only for Jakarta XML validation (generates XML from JPA data)
+    private final ProductService productService;
+
+    private final XmlValidator xmlValidator;
+    private final JsonValidator jsonValidator;
+    private final JakartaXmlValidationService jakartaXmlValidationService;
+    private final ObjectMapper objectMapper;
+
+    @GetMapping
+    public ResponseEntity<List<ProductDTO>> getAll() {
+        return ResponseEntity.ok(productApiService.getAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(productApiService.getById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<ProductDTO> create(@Valid @RequestBody ProductDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productApiService.create(dto));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductDTO> update(@PathVariable Long id, @Valid @RequestBody ProductDTO dto) {
+        return ResponseEntity.ok(productApiService.update(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        productApiService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/validate-xml")
+    public ResponseEntity<?> validateXml() throws Exception {
+        var products = productService.getAll();
+        String xmlContent = jakartaXmlValidationService.generateXmlFromProducts(products);
+        List<String> errors = jakartaXmlValidationService.validateXml(xmlContent);
+
+        if (errors.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "valid", true,
+                    "message", "XML je validan!",
+                    "xml", xmlContent
+            ));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "valid", false,
+                    "errors", errors
+            ));
+        }
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> upload(
+            @RequestParam("xmlFile") MultipartFile xmlFile,
+            @RequestParam("jsonFile") MultipartFile jsonFile) throws IOException {
+
+        List<String> errors = new ArrayList<>();
+        byte[] jsonBytes = jsonFile.getBytes();
+
+        List<String> xmlErrors = xmlValidator.validate(xmlFile.getInputStream());
+        List<String> jsonErrors = jsonValidator.validate(new java.io.ByteArrayInputStream(jsonBytes));
+
+        if (!xmlErrors.isEmpty()) {
+            errors.addAll(xmlErrors.stream().map(e -> "XML: " + e).toList());
+        }
+        if (!jsonErrors.isEmpty()) {
+            errors.addAll(jsonErrors.stream().map(e -> "JSON: " + e).toList());
+        }
+
+        if (!errors.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("validationErrors", errors));
+        }
+
+        ProductDTO dto = objectMapper.readValue(jsonBytes, ProductDTO.class);
+        return ResponseEntity.status(HttpStatus.CREATED).body(productApiService.create(dto));
+    }
+}

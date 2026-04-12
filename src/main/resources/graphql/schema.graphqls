@@ -1,0 +1,27 @@
+type Query {
+    products: [Product]
+    product(id: ID!): Product
+}
+
+type Mutation {
+    createProduct(input: ProductInput!): Product
+    updateProduct(id: ID!, input: ProductInput!): Product
+    deleteProduct(id: ID!): Boolean
+}
+
+type Product {
+    id: ID
+    naziv: String
+    cijena: Float
+    kategorija: String
+    opis: String
+    kolicina: Int
+}
+
+input ProductInput {
+    naziv: String!
+    cijena: Float!
+    kategorija: String
+    opis: String
+    kolicina: Int
+}
