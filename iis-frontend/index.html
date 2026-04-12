@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IIS — Prijava</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #111118;
+            --border: #1e1e2e;
+            --accent: #6c63ff;
+            --accent2: #ff6584;
+            --text: #e8e8f0;
+            --muted: #5a5a7a;
+            --success: #43e97b;
+            --error: #ff6584;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .bg-grid {
+            position: fixed; inset: 0;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .glow {
+            position: fixed; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+            top: -200px; left: -100px; pointer-events: none;
+        }
+        .glow2 {
+            position: fixed; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(255,101,132,0.08) 0%, transparent 70%);
+            bottom: -100px; right: -100px; pointer-events: none;
+        }
+        .container {
+            position: relative; z-index: 10; width: 420px;
+            animation: fadeUp 0.5s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            font-family: 'Space Mono', monospace; font-size: 13px;
+            color: var(--accent); letter-spacing: 3px;
+            text-transform: uppercase; margin-bottom: 8px;
+        }
+        h1 {
+            font-family: 'Space Mono', monospace; font-size: 28px;
+            font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.2;
+        }
+        .subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 32px;
+        }
+        .tabs {
+            display: flex; gap: 4px; background: var(--bg);
+            padding: 4px; border-radius: 10px; margin-bottom: 28px;
+        }
+        .tab {
+            flex: 1; padding: 9px; text-align: center; border-radius: 7px;
+            cursor: pointer; font-size: 13px; font-weight: 500;
+            color: var(--muted); transition: all 0.2s;
+            border: none; background: transparent;
+        }
+        .tab.active { background: var(--accent); color: white; }
+        .form-section { display: none; }
+        .form-section.active { display: block; }
+        .field { margin-bottom: 16px; }
+        label {
+            display: block; font-size: 12px; font-weight: 500;
+            color: var(--muted); text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 8px;
+        }
+        input {
+            width: 100%; padding: 12px 16px; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text); font-size: 15px;
+            font-family: 'DM Sans', sans-serif;
+            transition: border-color 0.2s; outline: none;
+        }
+        input:focus { border-color: var(--accent); }
+        button.primary {
+            width: 100%; padding: 13px; background: var(--accent);
+            border: none; border-radius: 10px; color: white;
+            font-size: 15px; font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer; margin-top: 8px; transition: all 0.2s;
+        }
+        button.primary:hover { background: #5a52e0; transform: translateY(-1px); }
+        .msg {
+            margin-top: 14px; padding: 10px 14px; border-radius: 8px;
+            font-size: 13px; display: none;
+        }
+        .msg.error { background: rgba(255,101,132,0.1); color: var(--error); border: 1px solid rgba(255,101,132,0.2); }
+        .msg.success { background: rgba(67,233,123,0.1); color: var(--success); border: 1px solid rgba(67,233,123,0.2); }
+        .msg.show { display: block; }
+        .hint {
+            margin-top: 20px; padding: 12px 16px;
+            background: rgba(108,99,255,0.08);
+            border: 1px solid rgba(108,99,255,0.2);
+            border-radius: 10px; font-size: 12px;
+            color: var(--muted); line-height: 1.6;
+        }
+        .hint strong { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="glow"></div>
+    <div class="glow2"></div>
+    <div class="container">
+        <div class="logo">// IIS Projekt</div>
+        <h1>Dobrodošli</h1>
+        <p class="subtitle">Interoperabilnost informacijskih sustava</p>
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login', this)">Prijava</button>
+                <button class="tab" onclick="switchTab('register', this)">Registracija</button>
+            </div>
+            <div class="form-section active" id="loginForm">
+                <div class="field">
+                    <label>Korisničko ime</label>
+                    <input type="text" id="loginUsername" placeholder="admin" autocomplete="username" />
+                </div>
+                <div class="field">
+                    <label>Lozinka</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••"
+                        onkeydown="if(event.key==='Enter') login()" />
+                </div>
+                <button class="primary" onclick="login()">Prijava</button>
+                <div class="msg error" id="loginError"></div>
+            </div>
+            <div class="form-section" id="registerForm">
+                <div class="field">
+                    <label>Korisničko ime</label>
+                    <input type="text" id="regUsername" placeholder="korisnicko_ime" />
+                </div>
+                <div class="field">
+                    <label>Lozinka</label>
+                    <input type="password" id="regPassword" placeholder="••••••••"
+                        onkeydown="if(event.key==='Enter') register()" />
+                </div>
+                <button class="primary" onclick="register()">Registracija</button>
+                <div class="msg error" id="regError"></div>
+                <div class="msg success" id="regSuccess"></div>
+            </div>
+        </div>
+        <div class="hint">
+            <strong>Uloge:</strong> Registrirani korisnici dobivaju ulogu <strong>USER</strong> (samo čitanje).<br>
+            Za <strong>ADMIN</strong> pristup kontaktirajte administratora.
+        </div>
+    </div>
+    <script>
+        const API = 'http://localhost:8080';
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tab + 'Form').classList.add('active');
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errEl = document.getElementById('loginError');
+            errEl.classList.remove('show');
+            if (!username || !password) {
+                errEl.innerText = 'Unesite korisničko ime i lozinku.';
+                errEl.classList.add('show'); return;
+            }
+            try {
+                const res = await fetch(`${API}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errEl.innerText = data.error || 'Pogrešno korisničko ime ili lozinka.';
+                    errEl.classList.add('show'); return;
+                }
+                localStorage.setItem('token', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken);
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('username', username);
+                window.location.href = 'dashboard.html';
+            } catch (e) {
+                errEl.innerText = 'Greška: backend nije dostupan na localhost:8080';
+                errEl.classList.add('show');
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const errEl = document.getElementById('regError');
+            const okEl = document.getElementById('regSuccess');
+            errEl.classList.remove('show'); okEl.classList.remove('show');
+            if (!username || !password) {
+                errEl.innerText = 'Unesite korisničko ime i lozinku.';
+                errEl.classList.add('show'); return;
+            }
+            try {
+                const res = await fetch(`${API}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errEl.innerText = data.error || 'Greška pri registraciji.';
+                    errEl.classList.add('show'); return;
+                }
+                okEl.innerText = '✓ Registracija uspješna! Možete se prijaviti.';
+                okEl.classList.add('show');
+                document.getElementById('regUsername').value = '';
+                document.getElementById('regPassword').value = '';
+            } catch (e) {
+                errEl.innerText = 'Greška: backend nije dostupan na localhost:8080';
+                errEl.classList.add('show');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IIS — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #111118;
+            --surface2: #16161f;
+            --border: #1e1e2e;
+            --accent: #6c63ff;
+            --accent2: #ff6584;
+            --text: #e8e8f0;
+            --muted: #5a5a7a;
+            --success: #43e97b;
+            --error: #ff6584;
+            --warning: #f7b731;
+            --sidebar-w: 240px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; z-index: 100;
+        }
+        .navbar-brand { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--accent); letter-spacing: 2px; }
+        .navbar-right { display: flex; align-items: center; gap: 14px; }
+        .user-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+        .role-tag {
+            padding: 3px 10px; border-radius: 20px; font-size: 11px;
+            font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .role-tag.admin { background: rgba(108,99,255,0.2); color: var(--accent); border: 1px solid rgba(108,99,255,0.3); }
+        .role-tag.user { background: rgba(255,101,132,0.15); color: var(--accent2); border: 1px solid rgba(255,101,132,0.2); }
+        .logout-btn {
+            padding: 7px 14px; background: transparent; border: 1px solid var(--border);
+            border-radius: 8px; color: var(--muted); font-size: 13px;
+            font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s;
+        }
+        .logout-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+        .sidebar {
+            position: fixed; top: 56px; left: 0; bottom: 0;
+            width: var(--sidebar-w); background: var(--surface);
+            border-right: 1px solid var(--border); padding: 20px 12px; overflow-y: auto;
+        }
+        .sidebar-label {
+            font-size: 10px; font-weight: 600; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 2px;
+            padding: 0 8px; margin-bottom: 8px; margin-top: 20px;
+        }
+        .sidebar-label:first-child { margin-top: 0; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+            border-radius: 8px; color: var(--muted); cursor: pointer;
+            font-size: 14px; transition: all 0.15s; margin-bottom: 2px;
+            border: none; background: transparent; width: 100%;
+            text-align: left; font-family: 'DM Sans', sans-serif;
+        }
+        .nav-item:hover { background: var(--surface2); color: var(--text); }
+        .nav-item.active { background: rgba(108,99,255,0.15); color: var(--accent); }
+        .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+        .nav-item.admin-only { display: none; }
+
+        .content { margin-left: var(--sidebar-w); margin-top: 56px; padding: 32px; min-height: calc(100vh - 56px); }
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .page-title { font-family: 'Space Mono', monospace; font-size: 20px; color: var(--text); margin-bottom: 6px; }
+        .page-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
+
+        .field { margin-bottom: 14px; }
+        .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        input[type=text], input[type=number], input[type=file], textarea {
+            width: 100%; padding: 10px 14px; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+            outline: none; transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); }
+        .row { display: flex; gap: 14px; }
+        .row .field { flex: 1; }
+
+        .btn {
+            padding: 9px 18px; border-radius: 8px; border: none;
+            font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #5a52e0; transform: translateY(-1px); }
+        .btn-danger { background: rgba(255,101,132,0.2); color: var(--error); border: 1px solid rgba(255,101,132,0.3); }
+        .btn-danger:hover { background: rgba(255,101,132,0.3); }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--surface2); }
+
+        .result-box {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 16px; margin-top: 16px; font-family: 'Space Mono', monospace;
+            font-size: 12px; line-height: 1.7; white-space: pre-wrap;
+            max-height: 320px; overflow-y: auto; display: none; color: var(--text);
+        }
+        .result-box.show { display: block; }
+        .result-box.success-result { border-color: rgba(67,233,123,0.3); color: var(--success); }
+        .result-box.error-result { border-color: rgba(255,101,132,0.3); color: var(--error); }
+
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+            border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 999;
+            transform: translateY(80px); opacity: 0; transition: all 0.3s;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: rgba(67,233,123,0.15); color: var(--success); border: 1px solid rgba(67,233,123,0.3); }
+        .toast.error { background: rgba(255,101,132,0.15); color: var(--error); border: 1px solid rgba(255,101,132,0.3); }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            z-index: 200; display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; width: 460px; max-width: 95vw; }
+        .modal-title { font-family: 'Space Mono', monospace; font-size: 16px; margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<nav class="navbar">
+    <div class="navbar-brand">// IIS PROJEKT</div>
+    <div class="navbar-right">
+        <div class="user-badge">
+            <span id="navUsername"></span>
+            <span class="role-tag" id="navRole"></span>
+        </div>
+        <button class="logout-btn" onclick="logout()">Odjava</button>
+    </div>
+</nav>
+
+<aside class="sidebar">
+    <div class="sidebar-label">Navigacija</div>
+    <button class="nav-item active" onclick="showSection('products', this)">
+        <span class="icon">📦</span> Proizvodi
+    </button>
+    <button class="nav-item admin-only" onclick="showSection('upload', this)">
+        <span class="icon">📤</span> Upload XML/JSON
+    </button>
+    <button class="nav-item" onclick="showSection('soap', this)">
+        <span class="icon">🔍</span> SOAP Pretraga
+    </button>
+    <button class="nav-item" onclick="showSection('validate', this)">
+        <span class="icon">✅</span> XML Validacija
+    </button>
+    <button class="nav-item" onclick="showSection('weather', this)">
+        <span class="icon">🌡️</span> Temperatura
+    </button>
+</aside>
+
+<main class="content">
+
+    <!-- PRODUCTS -->
+    <div class="section active" id="products">
+        <div class="page-title">Proizvodi</div>
+        <p class="page-desc">Pregled i upravljanje proizvodima iz baze podataka.</p>
+        <div class="card">
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="loadProducts()">↻ Učitaj proizvode</button>
+                <button class="btn btn-secondary admin-only" onclick="openAddModal()">+ Dodaj proizvod</button>
+            </div>
+            <div style="margin-top: 20px;" id="productsTable">
+                <div class="empty-state">Kliknite "Učitaj proizvode" za prikaz podataka.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="section" id="upload">
+        <div class="page-title">Upload XML / JSON</div>
+        <p class="page-desc">Zadatak 1 — Upload i validacija XML i JSON datoteka.</p>
+        <div class="card">
+            <div class="card-title">Odaberite datoteke</div>
+            <div class="field">
+                <label>XML datoteka (.xml)</label>
+                <input type="file" id="xmlFile" accept=".xml" />
+            </div>
+            <div class="field">
+                <label>JSON datoteka (.json)</label>
+                <input type="file" id="jsonFile" accept=".json" />
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="uploadFiles()">Validiraj i spremi</button>
+            </div>
+            <div class="result-box" id="uploadResult"></div>
+        </div>
+    </div>
+
+    <!-- SOAP -->
+    <div class="section" id="soap">
+        <div class="page-title">SOAP Pretraga</div>
+        <p class="page-desc">Zadatak 2 — Pretraga proizvoda putem SOAP sučelja s XPath filtrom.</p>
+        <div class="card">
+            <div class="card-title">Pretraga po pojmu</div>
+            <div class="field">
+                <label>Pojam</label>
+                <input type="text" id="soapPojam" placeholder="npr. kava, laptop..."
+                    onkeydown="if(event.key==='Enter') soapSearch()" />
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="soapSearch()">Pretraži</button>
+            </div>
+            <div class="result-box" id="soapResult"></div>
+        </div>
+    </div>
+
+    <!-- VALIDATE -->
+    <div class="section" id="validate">
+        <div class="page-title">Jakarta XML Validacija</div>
+        <p class="page-desc">Zadatak 3 — Generiranje XML-a iz baze i validacija prema XSD shemi.</p>
+        <div class="card">
+            <div class="card-title">Pokreni validaciju</div>
+            <p style="color: var(--muted); font-size: 14px; margin-bottom: 18px;">
+                Generira XML od svih proizvoda i validira prema <code>products-list.xsd</code>.
+            </p>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="validateXml()">Pokreni</button>
+            </div>
+            <div class="result-box" id="validateResult"></div>
+        </div>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="section" id="weather">
+        <div class="page-title">DHMZ Temperatura</div>
+        <p class="page-desc">Zadatak 4 — Dohvaćanje temperature putem gRPC servisa iz DHMZ-a.</p>
+        <div class="card">
+            <div class="card-title">Pretraga po gradu</div>
+            <div class="field">
+                <label>Naziv grada</label>
+                <input type="text" id="cityInput" placeholder="npr. zagreb, split..."
+                    onkeydown="if(event.key==='Enter') getWeather()" />
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="getWeather()">Dohvati temperaturu</button>
+            </div>
+            <div class="result-box" id="weatherResult"></div>
+        </div>
+    </div>
+
+</main>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-title">Dodaj novi proizvod</div>
+        <div class="row">
+            <div class="field">
+                <label>Naziv *</label>
+                <input type="text" id="m_naziv" placeholder="Naziv proizvoda" />
+            </div>
+            <div class="field">
+                <label>Cijena (€) *</label>
+                <input type="number" id="m_cijena" placeholder="0.00" step="0.01" min="0" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label>Kategorija</label>
+                <input type="text" id="m_kategorija" placeholder="Kategorija" />
+            </div>
+            <div class="field">
+                <label>Količina</label>
+                <input type="number" id="m_kolicina" placeholder="0" min="0" />
+            </div>
+        </div>
+        <div class="field">
+            <label>Opis</label>
+            <input type="text" id="m_opis" placeholder="Opis proizvoda" />
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('addModal')">Odustani</button>
+            <button class="btn btn-primary" onclick="createProduct()">Dodaj</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-title">Uredi proizvod</div>
+        <input type="hidden" id="e_id" />
+        <div class="row">
+            <div class="field">
+                <label>Naziv *</label>
+                <input type="text" id="e_naziv" />
+            </div>
+            <div class="field">
+                <label>Cijena (€) *</label>
+                <input type="number" id="e_cijena" step="0.01" min="0" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label>Kategorija</label>
+                <input type="text" id="e_kategorija" />
+            </div>
+            <div class="field">
+                <label>Količina</label>
+                <input type="number" id="e_kolicina" min="0" />
+            </div>
+        </div>
+        <div class="field">
+            <label>Opis</label>
+            <input type="text" id="e_opis" />
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('editModal')">Odustani</button>
+            <button class="btn btn-primary" onclick="updateProduct()">Spremi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080';
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const username = localStorage.getItem('username');
+
+    if (!token) window.location.href = 'index.html';
+
+    document.getElementById('navUsername').innerText = username || '';
+    const roleEl = document.getElementById('navRole');
+    roleEl.innerText = role || 'USER';
+    roleEl.className = 'role-tag ' + (role === 'ADMIN' ? 'admin' : 'user');
+
+    if (role === 'ADMIN') {
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = el.classList.contains('nav-item') ? 'flex' : 'block';
+        });
+    }
+
+    function headers() {
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    function showSection(name, btn) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(name).classList.add('active');
+        if (btn) btn.classList.add('active');
+    }
+
+    function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+
+    function toast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.className = `toast ${type} show`;
+        setTimeout(() => t.className = 'toast', 3000);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    function openAddModal() {
+        ['m_naziv','m_cijena','m_kategorija','m_kolicina','m_opis'].forEach(id => document.getElementById(id).value = '');
+        openModal('addModal');
+    }
+
+    // PRODUCTS
+    async function loadProducts() {
+        try {
+            const res = await fetch(`${API}/api/products`, { headers: headers() });
+            if (!res.ok) throw new Error('Greška pri dohvaćanju');
+            const data = await res.json();
+
+            if (!data.length) {
+                document.getElementById('productsTable').innerHTML = '<div class="empty-state">Nema proizvoda u bazi.</div>';
+                return;
+            }
+
+            let html = '<div class="table-wrap"><table><thead><tr>' +
+                '<th>ID</th><th>Naziv</th><th>Cijena</th><th>Kategorija</th><th>Opis</th><th>Količina</th>';
+            if (role === 'ADMIN') html += '<th>Akcije</th>';
+            html += '</tr></thead><tbody>';
+
+            data.forEach(p => {
+                html += `<tr>
+                    <td style="color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;">#${p.id}</td>
+                    <td><strong>${p.naziv || ''}</strong></td>
+                    <td>${p.cijena ? p.cijena + ' €' : '-'}</td>
+                    <td>${p.kategorija || '-'}</td>
+                    <td>${p.opis || '-'}</td>
+                    <td>${p.kolicina ?? '-'}</td>`;
+                if (role === 'ADMIN') {
+                    html += `<td><div style="display:flex;gap:6px;">
+                        <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px;" onclick='openEditModal(${JSON.stringify(p)})'>Uredi</button>
+                        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px;" onclick="deleteProduct(${p.id})">Briši</button>
+                    </div></td>`;
+                }
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            document.getElementById('productsTable').innerHTML = html;
+        } catch (e) {
+            toast('Greška: ' + e.message, 'error');
+        }
+    }
+
+    async function createProduct() {
+        const dto = {
+            naziv: document.getElementById('m_naziv').value.trim(),
+            cijena: parseFloat(document.getElementById('m_cijena').value),
+            kategorija: document.getElementById('m_kategorija').value.trim() || null,
+            opis: document.getElementById('m_opis').value.trim() || null,
+            kolicina: parseInt(document.getElementById('m_kolicina').value) || null
+        };
+        if (!dto.naziv || isNaN(dto.cijena)) { toast('Naziv i cijena su obavezni!', 'error'); return; }
+        try {
+            const res = await fetch(`${API}/api/products`, {
+                method: 'POST', headers: headers(), body: JSON.stringify(dto)
+            });
+            if (!res.ok) throw new Error('Greška pri dodavanju');
+            closeModal('addModal');
+            toast('✓ Proizvod uspješno dodan!');
+            loadProducts();
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function openEditModal(p) {
+        document.getElementById('e_id').value = p.id;
+        document.getElementById('e_naziv').value = p.naziv || '';
+        document.getElementById('e_cijena').value = p.cijena || '';
+        document.getElementById('e_kategorija').value = p.kategorija || '';
+        document.getElementById('e_kolicina').value = p.kolicina || '';
+        document.getElementById('e_opis').value = p.opis || '';
+        openModal('editModal');
+    }
+
+    async function updateProduct() {
+        const id = document.getElementById('e_id').value;
+        const dto = {
+            naziv: document.getElementById('e_naziv').value.trim(),
+            cijena: parseFloat(document.getElementById('e_cijena').value),
+            kategorija: document.getElementById('e_kategorija').value.trim() || null,
+            opis: document.getElementById('e_opis').value.trim() || null,
+            kolicina: parseInt(document.getElementById('e_kolicina').value) || null
+        };
+        try {
+            const res = await fetch(`${API}/api/products/${id}`, {
+                method: 'PUT', headers: headers(), body: JSON.stringify(dto)
+            });
+            if (!res.ok) throw new Error('Greška pri ažuriranju');
+            closeModal('editModal');
+            toast('✓ Proizvod uspješno ažuriran!');
+            loadProducts();
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function deleteProduct(id) {
+        if (!confirm(`Obrisati proizvod #${id}?`)) return;
+        try {
+            const res = await fetch(`${API}/api/products/${id}`, {
+                method: 'DELETE', headers: headers()
+            });
+            if (!res.ok) throw new Error('Greška pri brisanju');
+            toast('✓ Proizvod obrisan!');
+            loadProducts();
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // UPLOAD
+    async function uploadFiles() {
+        const xmlFile = document.getElementById('xmlFile').files[0];
+        const jsonFile = document.getElementById('jsonFile').files[0];
+        const el = document.getElementById('uploadResult');
+        if (!xmlFile || !jsonFile) {
+            el.innerText = 'Molimo odaberite obje datoteke!';
+            el.className = 'result-box error-result show'; return;
+        }
+        const formData = new FormData();
+        formData.append('xmlFile', xmlFile);
+        formData.append('jsonFile', jsonFile);
+        try {
+            const res = await fetch(`${API}/api/products/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            const data = await res.json();
+            el.innerText = JSON.stringify(data, null, 2);
+            el.className = 'result-box show ' + (res.ok ? 'success-result' : 'error-result');
+            if (res.ok) toast('✓ Upload uspješan!');
+        } catch (e) {
+            el.innerText = 'Greška: ' + e.message;
+            el.className = 'result-box error-result show';
+        }
+    }
+
+    // SOAP
+    async function soapSearch() {
+        const pojam = document.getElementById('soapPojam').value.trim();
+        const el = document.getElementById('soapResult');
+        if (!pojam) {
+            el.innerText = 'Unesite pojam za pretragu!';
+            el.className = 'result-box error-result show'; return;
+        }
+        const soapEnvelope = `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="http://iis.algebra.hr/soap">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <tns:SearchProductsRequest>
+         <tns:pojam>${pojam}</tns:pojam>
+      </tns:SearchProductsRequest>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+        try {
+            const res = await fetch(`${API}/ws`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/xml' },
+                body: soapEnvelope
+            });
+            const text = await res.text();
+            el.innerText = text;
+            el.className = 'result-box show ' + (res.ok ? '' : 'error-result');
+        } catch (e) {
+            el.innerText = 'Greška: ' + e.message;
+            el.className = 'result-box error-result show';
+        }
+    }
+
+    // VALIDATE
+    async function validateXml() {
+        const el = document.getElementById('validateResult');
+        try {
+            const res = await fetch(`${API}/api/products/validate-xml`, { headers: headers() });
+            const data = await res.json();
+            el.innerText = JSON.stringify(data, null, 2);
+            el.className = 'result-box show ' + (data.valid ? 'success-result' : 'error-result');
+        } catch (e) {
+            el.innerText = 'Greška: ' + e.message;
+            el.className = 'result-box error-result show';
+        }
+    }
+
+    // WEATHER
+    async function getWeather() {
+        const city = document.getElementById('cityInput').value.trim();
+        const el = document.getElementById('weatherResult');
+        if (!city) {
+            el.innerText = 'Unesite naziv grada!';
+            el.className = 'result-box error-result show'; return;
+        }
+        try {
+            const res = await fetch(`${API}/api/weather/${encodeURIComponent(city)}`, { headers: headers() });
+            const data = await res.json();
+            if (!data.length) {
+                el.innerText = `Nema podataka za grad: ${city}`;
+                el.className = 'result-box show'; return;
+            }
+            let text = '';
+            data.forEach(d => { text += `${d.grad}: ${d.temperatura}°C\n`; });
+            el.innerText = text.trim();
+            el.className = 'result-box success-result show';
+        } catch (e) {
+            el.innerText = 'Greška: ' + e.message;
+            el.className = 'result-box error-result show';
+        }
+    }
+
+    loadProducts();
+</script>
+</body>
+</html>
