@@ -19,13 +19,13 @@ public class ProductGraphQLController {
     private final ProductApiService productApiService;
 
     @QueryMapping
-    @PreAuthorize("hasAnyRole('READ', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public List<ProductDTO> products() {
         return productApiService.getAll();
     }
 
     @QueryMapping
-    @PreAuthorize("hasAnyRole('READ', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ProductDTO product(@Argument Long id) {
         return productApiService.getById(id);
     }

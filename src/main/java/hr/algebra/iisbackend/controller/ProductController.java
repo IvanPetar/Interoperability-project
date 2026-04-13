@@ -83,27 +83,39 @@ public class ProductController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(
-            @RequestParam("xmlFile") MultipartFile xmlFile,
-            @RequestParam("jsonFile") MultipartFile jsonFile) throws IOException {
+            @RequestParam(value = "xmlFile", required = false) MultipartFile xmlFile,
+            @RequestParam(value = "jsonFile", required = false) MultipartFile jsonFile) throws IOException {
 
         List<String> errors = new ArrayList<>();
-        byte[] jsonBytes = jsonFile.getBytes();
 
-        List<String> xmlErrors = xmlValidator.validate(xmlFile.getInputStream());
-        List<String> jsonErrors = jsonValidator.validate(new java.io.ByteArrayInputStream(jsonBytes));
-
-        if (!xmlErrors.isEmpty()) {
-            errors.addAll(xmlErrors.stream().map(e -> "XML: " + e).toList());
+        // Check is there only one file uploaded
+        if (xmlFile == null && jsonFile == null) {
+            return ResponseEntity.badRequest().body(Map.of("validationErrors", List.of("Molimo uploadajte barem jednu datoteku!")));
         }
-        if (!jsonErrors.isEmpty()) {
-            errors.addAll(jsonErrors.stream().map(e -> "JSON: " + e).toList());
+        byte[] jsonBytes = null;
+        if (xmlFile != null && !xmlFile.isEmpty()) {
+            List<String> xmlErrors = xmlValidator.validate(xmlFile.getInputStream());
+            if (!xmlErrors.isEmpty()) {
+                errors.addAll(xmlErrors.stream().map(e -> "XML: " + e).toList());
+            }
+        }
+        if (jsonFile != null && !jsonFile.isEmpty()) {
+            jsonBytes = jsonFile.getBytes();
+            List<String> jsonErrors = jsonValidator.validate(new java.io.ByteArrayInputStream(jsonBytes));
+            if (!jsonErrors.isEmpty()) {
+                errors.addAll(jsonErrors.stream().map(e -> "JSON: " + e).toList());
+            }
         }
 
         if (!errors.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("validationErrors", errors));
         }
 
-        ProductDTO dto = objectMapper.readValue(jsonBytes, ProductDTO.class);
-        return ResponseEntity.status(HttpStatus.CREATED).body(productApiService.create(dto));
+        if (jsonBytes != null) {
+            ProductDTO dto = objectMapper.readValue(jsonBytes, ProductDTO.class);
+            return ResponseEntity.status(HttpStatus.CREATED).body(productApiService.create(dto));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "XML je validan!"));
     }
 }
