@@ -84,21 +84,25 @@ public class ProductController {
     @PostMapping("/upload")
     public ResponseEntity<?> upload(
             @RequestParam(value = "xmlFile", required = false) MultipartFile xmlFile,
-            @RequestParam(value = "jsonFile", required = false) MultipartFile jsonFile) throws IOException {
+            @RequestParam(value = "jsonFile", required = false) MultipartFile jsonFile) throws Exception {
 
         List<String> errors = new ArrayList<>();
 
-        // Check is there only one file uploaded
         if (xmlFile == null && jsonFile == null) {
-            return ResponseEntity.badRequest().body(Map.of("validationErrors", List.of("Molimo uploadajte barem jednu datoteku!")));
+            return ResponseEntity.badRequest().body(Map.of("validationErrors", List.of("Odaberite barem jednu datoteku!")));
         }
+
         byte[] jsonBytes = null;
+        byte[] xmlBytes = null;
+
         if (xmlFile != null && !xmlFile.isEmpty()) {
-            List<String> xmlErrors = xmlValidator.validate(xmlFile.getInputStream());
+            xmlBytes = xmlFile.getBytes();
+            List<String> xmlErrors = xmlValidator.validate(new java.io.ByteArrayInputStream(xmlBytes));
             if (!xmlErrors.isEmpty()) {
                 errors.addAll(xmlErrors.stream().map(e -> "XML: " + e).toList());
             }
         }
+
         if (jsonFile != null && !jsonFile.isEmpty()) {
             jsonBytes = jsonFile.getBytes();
             List<String> jsonErrors = jsonValidator.validate(new java.io.ByteArrayInputStream(jsonBytes));
@@ -116,6 +120,29 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.CREATED).body(productApiService.create(dto));
         }
 
-        return ResponseEntity.ok(Map.of("message", "XML je validan!"));
+        if (xmlBytes != null) {
+            javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            javax.xml.parsers.DocumentBuilder builder = factory.newDocumentBuilder();
+            org.w3c.dom.Document doc = builder.parse(new java.io.ByteArrayInputStream(xmlBytes));
+            doc.getDocumentElement().normalize();
+
+            ProductDTO dto = new ProductDTO();
+            dto.setNaziv(getXmlValue(doc, "naziv"));
+            dto.setCijena(new java.math.BigDecimal(getXmlValue(doc, "cijena")));
+            dto.setKategorija(getXmlValue(doc, "kategorija"));
+            dto.setOpis(getXmlValue(doc, "opis"));
+            String kolicina = getXmlValue(doc, "kolicina");
+            if (kolicina != null && !kolicina.isEmpty()) dto.setKolicina(Integer.parseInt(kolicina));
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(productApiService.create(dto));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Validacija uspješna!"));
+    }
+
+    private String getXmlValue(org.w3c.dom.Document doc, String tag) {
+        org.w3c.dom.NodeList list = doc.getElementsByTagName(tag);
+        if (list.getLength() > 0) return list.item(0).getTextContent();
+        return null;
     }
 }

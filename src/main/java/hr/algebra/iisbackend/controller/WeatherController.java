@@ -1,7 +1,6 @@
 package hr.algebra.iisbackend.controller;
 
 import hr.algebra.iisbackend.grpc.CityRequest;
-import hr.algebra.iisbackend.grpc.CityTemperature;
 import hr.algebra.iisbackend.grpc.TemperatureResponse;
 import hr.algebra.iisbackend.grpc.WeatherServiceGrpc;
 import io.grpc.ManagedChannel;

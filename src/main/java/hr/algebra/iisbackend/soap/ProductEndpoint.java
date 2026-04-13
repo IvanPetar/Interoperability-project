@@ -9,6 +9,7 @@ import org.springframework.ws.server.endpoint.annotation.Endpoint;
 import org.springframework.ws.server.endpoint.annotation.PayloadRoot;
 import org.springframework.ws.server.endpoint.annotation.RequestPayload;
 import org.springframework.ws.server.endpoint.annotation.ResponsePayload;
+import hr.algebra.iisbackend.service.ProductApiService;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -17,10 +18,6 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.StringWriter;
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.Marshaller;
-import java.util.ArrayList;
 import java.util.List;
 
 @Endpoint
@@ -29,7 +26,7 @@ public class ProductEndpoint {
 
     private static final String NAMESPACE_URI = "http://iis.algebra.hr/soap";
 
-    private final ProductService productService;
+    private final ProductApiService productApiService;
 
     @PayloadRoot(namespace = NAMESPACE_URI, localPart = "SearchProductsRequest")
     @ResponsePayload
@@ -71,16 +68,16 @@ public class ProductEndpoint {
     }
 
     private String generateXml() throws Exception {
-        var products = productService.getAll();
+        var products = productApiService.getAll();
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><products>");
         for (var p : products) {
             sb.append("<product>");
             sb.append("<id>").append(p.getId()).append("</id>");
-            sb.append("<naziv>").append(p.getName()).append("</naziv>");
-            sb.append("<cijena>").append(p.getPrice()).append("</cijena>");
-            sb.append("<kategorija>").append(p.getCategory() != null ? p.getCategory() : "").append("</kategorija>");
-            sb.append("<opis>").append(p.getDescription() != null ? p.getDescription() : "").append("</opis>");
+            sb.append("<naziv>").append(p.getNaziv()).append("</naziv>");
+            sb.append("<cijena>").append(p.getCijena()).append("</cijena>");
+            sb.append("<kategorija>").append(p.getKategorija() != null ? p.getKategorija() : "").append("</kategorija>");
+            sb.append("<opis>").append(p.getOpis() != null ? p.getOpis() : "").append("</opis>");
             sb.append("<kolicina>").append(p.getKolicina() != null ? p.getKolicina() : "").append("</kolicina>");
             sb.append("</product>");
         }
