@@ -13,8 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,9 +35,17 @@ public class ProductController {
     private final JakartaXmlValidationService jakartaXmlValidationService;
     private final ObjectMapper objectMapper;
 
+    @Value("${api.mode:custom}")
+    private String apiMode;
+
     @GetMapping
     public ResponseEntity<List<ProductDTO>> getAll() {
         return ResponseEntity.ok(productApiService.getAll());
+    }
+
+    @GetMapping("/api-mode")
+    public ResponseEntity<?> getApiMode() {
+        return ResponseEntity.ok(Map.of("mode", apiMode));
     }
 
     @GetMapping("/{id}")

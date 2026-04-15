@@ -18,7 +18,7 @@ public class CustomProductApiService implements ProductApiService {
 
     @Override
     public List<ProductDTO> getAll() {
-        return productRepository.findAll().stream()
+        return productRepository.findAllByOrderByIdAsc().stream()
                 .map(ProductDTO::fromEntity)
                 .toList();
     }

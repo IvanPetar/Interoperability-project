@@ -1,5 +1,6 @@
 package hr.algebra.iisbackend.soap;
 
+import hr.algebra.iisbackend.service.JakartaXmlValidationService;
 import hr.algebra.iisbackend.soap.generated.ProductSoap;
 import hr.algebra.iisbackend.soap.generated.SearchProductsRequest;
 import hr.algebra.iisbackend.soap.generated.SearchProductsResponse;
@@ -9,7 +10,7 @@ import org.springframework.ws.server.endpoint.annotation.Endpoint;
 import org.springframework.ws.server.endpoint.annotation.PayloadRoot;
 import org.springframework.ws.server.endpoint.annotation.RequestPayload;
 import org.springframework.ws.server.endpoint.annotation.ResponsePayload;
-import hr.algebra.iisbackend.service.ProductApiService;
+
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -26,14 +27,15 @@ public class ProductEndpoint {
 
     private static final String NAMESPACE_URI = "http://iis.algebra.hr/soap";
 
-    private final ProductApiService productApiService;
+    private final ProductService productService;
+    private final JakartaXmlValidationService jakartaXmlValidationService;
 
     @PayloadRoot(namespace = NAMESPACE_URI, localPart = "SearchProductsRequest")
     @ResponsePayload
     public SearchProductsResponse searchProducts(@RequestPayload SearchProductsRequest request) throws Exception {
 
         // 1. Dohvati sve proizvode i generiraj XML
-        String xmlContent = generateXml();
+        String xmlContent = jakartaXmlValidationService.generateXmlFromProducts(productService.getAll());
 
         // 2. XPath pretraga po pojmu
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -65,24 +67,6 @@ public class ProductEndpoint {
         }
 
         return response;
-    }
-
-    private String generateXml() throws Exception {
-        var products = productApiService.getAll();
-        StringBuilder sb = new StringBuilder();
-        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><products>");
-        for (var p : products) {
-            sb.append("<product>");
-            sb.append("<id>").append(p.getId()).append("</id>");
-            sb.append("<naziv>").append(p.getNaziv()).append("</naziv>");
-            sb.append("<cijena>").append(p.getCijena()).append("</cijena>");
-            sb.append("<kategorija>").append(p.getKategorija() != null ? p.getKategorija() : "").append("</kategorija>");
-            sb.append("<opis>").append(p.getOpis() != null ? p.getOpis() : "").append("</opis>");
-            sb.append("<kolicina>").append(p.getKolicina() != null ? p.getKolicina() : "").append("</kolicina>");
-            sb.append("</product>");
-        }
-        sb.append("</products>");
-        return sb.toString();
     }
 
     private String getNodeValue(org.w3c.dom.Node node, String tagName) {
